@@ -108,8 +108,6 @@ def setup():
     global ky040_left
     global ky040_right
     global counter
-    global current_input_select
-    current_input_select = "input_select.radio_main_menu"
 
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(RoPush, GPIO.IN, pull_up_down=GPIO.PUD_UP)
