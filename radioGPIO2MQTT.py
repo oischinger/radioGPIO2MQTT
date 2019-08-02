@@ -88,7 +88,6 @@ client.loop_start()
 sendDiscover()
 
 domain = 'script'
-mediaplayer_name = 'media_player.wohnzimmer_2'
 RoPush = 26
 RoPushOffOn = 21
 CLOCKPIN_LEFT = 5
