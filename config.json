@@ -1,0 +1,25 @@
+{
+  "name": "radioGPIO2MQTT",
+  "version": "1.2.1",
+  "slug": "radiogpio2mqtt",
+  "description": "Radio GPIO2MQTT",
+  "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
+  "startup": "before",
+  "boot": "auto",
+  "gpio": true,
+  "devices": [ "/dev/mem:/dev/mem:rw" ],
+  "privileged": [ "SYS_RAWIO" ],
+  "options": {
+    "mqtt_host": "127.0.0.1",
+    "mqtt_port": "1883",
+    "mqtt_username": "",
+    "mqtt_password": ""
+  },
+  "schema": {
+    "mqtt_host": "str",
+    "mqtt_port": "str",
+    "mqtt_username": "str",
+    "mqtt_password": "str"
+  }
+}
+
