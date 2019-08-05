@@ -79,16 +79,18 @@ selector_topic = 'homeassistant/sensor/home_radio_selector/state'
 selector_press_topic = 'homeassistant/sensor/home_radio_selector_press/state'
 onoff_topic = 'homeassistant/sensor/home_radio_onoff/state'
 next_topic = 'homeassistant/sensor/home_radio_next/state'
-client = mqtt.Client("ha-client")
-client.on_connect = on_connect
-client.on_message = on_message
-client.username_pw_set(USERNAME, PASSWORD)
-client.connect(HOST, PORT, 60)
-client.loop_start() 
-sendDiscover()
 
-domain = 'script'
-RoPush = 26
+client = mqtt.Client("ha-client")
+
+def setupmqtt():
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.username_pw_set(USERNAME, PASSWORD)
+    client.connect_async(HOST, PORT, 60)
+    client.loop_start() 
+    sendDiscover()
+
+RoPushNext = 26
 RoPushOffOn = 21
 CLOCKPIN_LEFT = 5
 DATAPIN_LEFT = 6
@@ -100,7 +102,7 @@ global counter
 global ky040_left
 global ky040_right
 currentOnOff = False
-lastVolTime = 0
+RoPushOffOnLastPullUp = 0
 
 def setup():
     print("GPIO setup")
@@ -110,12 +112,12 @@ def setup():
     global counter
 
     GPIO.setmode(GPIO.BCM)
-    GPIO.setup(RoPush, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(RoPushNext, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(RoPushOffOn, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     ky040_left = RotaryEncoder(CLOCKPIN_LEFT, DATAPIN_LEFT, SWITCHPIN_LEFT, rotaryButtonPressLeft)
     ky040_right = RotaryEncoder(CLOCKPIN_RIGHT, DATAPIN_RIGHT, SWITCHPIN_RIGHT, rotaryButtonPressRight)
-    GPIO.add_event_detect(RoPush, GPIO.FALLING, callback=button_press, bouncetime=1000)
-    GPIO.add_event_detect(RoPushOffOn, GPIO.FALLING, callback=toggle_media_player, bouncetime=1000)
+    GPIO.add_event_detect(RoPushNext, GPIO.FALLING, callback=button_press_next, bouncetime=100)
+    GPIO.add_event_detect(RoPushOffOn, GPIO.BOTH, callback=button_press_on_off, bouncetime=100)
 
 def rotaryButtonPressLeft(dummy):
     time.sleep(1)
@@ -124,23 +126,27 @@ def rotaryButtonPressRight(dummy):
     publish.single(selector_press_topic, payload="True", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
     publish.single(selector_press_topic, payload="False", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
 
-def button_press(ev=None):
+def button_press_next(ev=None):
     publish.single(next_topic, payload="True", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
     publish.single(next_topic, payload="False", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
 
-def toggle_media_player(ev=None):
+def button_press_on_off(ev=None):
     global currentOnOff
-    currentOnOff = not currentOnOff
-    publish.single(onoff_topic, payload=str(currentOnOff), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
-    print("toggle_media_player")
+    global RoPushOffOnLastPullUp
+    if GPIO.input(RoPushOffOn) == 1:
+        RoPushOffOnLastPullUp = time.time()
+    else:
+        if RoPushOffOnLastPullUp > 0 and (time.time() - RoPushOffOnLastPullUp) >= 1.0:
+            currentOnOff = not currentOnOff
+            publish.single(onoff_topic, payload=str(currentOnOff), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
+            print("toggle_media_player")
+        RoPushOffOnLastPullUp = 0
 
 def loop():
-    lastVolTime = 0
     currentVolume = 20
     currentSelector = 1000
     while True:
-        time.sleep(0.1)
-        
+        time.sleep(0.2)
         try:
             ##########
             # Volume #
@@ -175,10 +181,19 @@ def loop():
             print(traceback.format_exc())
 
 def destroy():
-    GPIO.cleanup()             # Release resource
+    GPIO.remove_event_detect(RoPush)
+    GPIO.remove_event_detect(RoPushOffOn)
+    GPIO.remove_event_detect(CLOCKPIN_LEFT)
+    GPIO.remove_event_detect(DATAPIN_LEFT)
+    GPIO.remove_event_detect(SWITCHPIN_LEFT)
+    GPIO.remove_event_detect(CLOCKPIN_RIGHT)
+    GPIO.remove_event_detect(DATAPIN_RIGHT)
+    GPIO.remove_event_detect(SWITCHPIN_RIGHT)
+    GPIO.cleanup()
 
-if __name__ == '__main__':     # Program start from here
+if __name__ == '__main__':
     setup()
+    setupmqtt()
     try:
         loop()
     except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the child program destroy() will be  executed.
