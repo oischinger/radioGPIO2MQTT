@@ -86,8 +86,10 @@ def setupmqtt():
     client.on_connect = on_connect
     client.on_message = on_message
     client.username_pw_set(USERNAME, PASSWORD)
+    print("Connecting to " + HOST)
     client.connect_async(HOST, PORT, 60)
     client.loop_start() 
+    print("Sending discover")
     sendDiscover()
 
 RoPushNext = 26
