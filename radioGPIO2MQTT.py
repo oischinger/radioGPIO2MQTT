@@ -50,7 +50,7 @@ class RotaryEncoder:
 
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
+    print("Connected with result code "+str(rc), flush=True)
 
     # Subscribing in on_connect() means that if we lose the connection and
     # reconnect then subscriptions will be renewed.
@@ -86,10 +86,10 @@ def setupmqtt():
     client.on_connect = on_connect
     client.on_message = on_message
     client.username_pw_set(USERNAME, PASSWORD)
-    print("Connecting to " + HOST)
+    print("Connecting to " + HOST, flush=True)
     client.connect_async(HOST, PORT, 60)
     client.loop_start() 
-    print("Sending discover")
+    print("Sending discover", flush=True)
     sendDiscover()
 
 RoPushNext = 26
@@ -107,7 +107,7 @@ currentOnOff = False
 RoPushOffOnLastPullUp = 0
 
 def setup():
-    print("GPIO setup")
+    print("GPIO setup", flush=True)
     
     global ky040_left
     global ky040_right
@@ -141,7 +141,7 @@ def button_press_on_off(ev=None):
         if RoPushOffOnLastPullUp > 0 and (time.time() - RoPushOffOnLastPullUp) >= 1.0:
             currentOnOff = not currentOnOff
             publish.single(onoff_topic, payload=str(currentOnOff), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
-            print("toggle_media_player")
+            print("toggle_media_player", flush=True)
         RoPushOffOnLastPullUp = 0
 
 def loop():
@@ -161,7 +161,7 @@ def loop():
                 newVolume = currentVolume + newValue*abs(newValue)
                 if (newVolume > 0 and newVolume < 100):
                     publish.single(volume_topic, payload=str(newVolume), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
-                    print("Setting rotary left value (volume): " + str(currentVolume) + " -> " + str(newVolume) + " (inc: " + str(newValue) + ")")
+                    print("Setting rotary left value (volume): " + str(currentVolume) + " -> " + str(newVolume) + " (inc: " + str(newValue) + ")", flush=True)
                     currentVolume = newVolume
             
             ##########
@@ -176,11 +176,11 @@ def loop():
                     currentSelector = currentSelector + 1
                 elif (newValue < 0):
                     currentSelector = currentSelector - 1
-                print("Setting rotary right value (menu): ", newValue)
+                print("Setting rotary right value (menu): ", newValue, flush=True)
                 publish.single(selector_topic, payload=str(currentSelector), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
         except:
-            print("Some exception")
-            print(traceback.format_exc())
+            print("Some exception", flush=True)
+            print(traceback.format_exc(), flush=True)
 
 def destroy():
     GPIO.remove_event_detect(RoPush)
