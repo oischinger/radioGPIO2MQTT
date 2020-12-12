@@ -1,6 +1,6 @@
 {
   "name": "radioGPIO2MQTT",
-  "version": "1.3.9",
+  "version": "1.3.10",
   "slug": "radiogpio2mqtt",
   "description": "Radio GPIO2MQTT",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
