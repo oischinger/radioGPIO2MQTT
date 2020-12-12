@@ -67,18 +67,18 @@ PORT = int(sys.argv[2])
 USERNAME = sys.argv[3]
 PASSWORD = sys.argv[4]
 
-def sendDiscover():
-    publish.single('homeassistant/sensor/home_radio_volume/config', payload='{"name": "Home Radio Volume"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
-    publish.single('homeassistant/sensor/home_radio_selector/config', payload='{"name": "Home Radio Selector"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
-    publish.single('homeassistant/sensor/home_radio_onoff/config', payload='{"name": "Home Radio OnOff"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
-    publish.single('homeassistant/sensor/home_radio_next/config', payload='{"name": "Home Radio Next"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
-    publish.single('homeassistant/sensor/home_radio_selector_press/config', payload='{"name": "Home Radio Selector Press"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
- 
 volume_topic = 'homeassistant/sensor/home_radio_volume/state'
 selector_topic = 'homeassistant/sensor/home_radio_selector/state'
 selector_press_topic = 'homeassistant/sensor/home_radio_selector_press/state'
 onoff_topic = 'homeassistant/sensor/home_radio_onoff/state'
 next_topic = 'homeassistant/sensor/home_radio_next/state'
+
+def sendDiscover():
+    publish.single('homeassistant/sensor/home_radio_volume/config', payload='{"name": "Home Radio Volume", "state_topic": "' + volume_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
+    publish.single('homeassistant/sensor/home_radio_selector/config', payload='{"name": "Home Radio Selector", "state_topic": "' + selector_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
+    publish.single('homeassistant/sensor/home_radio_onoff/config', payload='{"name": "Home Radio OnOff", "state_topic": "' + onoff_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
+    publish.single('homeassistant/sensor/home_radio_next/config', payload='{"name": "Home Radio Next", "state_topic": "' + next_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
+    publish.single('homeassistant/sensor/home_radio_selector_press/config', payload='{"name": "Home Radio Selector Press", "state_topic": "' + selector_press_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
 
 client = mqtt.Client("ha-client")
 
