@@ -56,29 +56,34 @@ def on_connect(client, userdata, flags, rc):
     # reconnect then subscriptions will be renewed.
     client.subscribe("$SYS/#")
     client.subscribe("homeassistant/status")
+    client.subscribe(ext_lights_topic + "/set")
 
 # The callback for when a PUBLISH message is received from the server.
 def on_message(client, userdata, msg):
-    if msg.topic == "homeassistant/status":
-        sendDiscover()
+    messages.append(msg)
 
 HOST = sys.argv[1]
 PORT = int(sys.argv[2])
 USERNAME = sys.argv[3]
 PASSWORD = sys.argv[4]
 
-volume_topic = 'homeassistant/sensor/home_radio_volume/state'
-selector_topic = 'homeassistant/sensor/home_radio_selector/state'
-selector_press_topic = 'homeassistant/sensor/home_radio_selector_press/state'
-onoff_topic = 'homeassistant/sensor/home_radio_onoff/state'
-next_topic = 'homeassistant/sensor/home_radio_next/state'
+messages=[]
+
+volume_topic = 'homeassistant/sensor/home_radio_volume'
+selector_topic = 'homeassistant/sensor/home_radio_selector'
+selector_press_topic = 'homeassistant/sensor/home_radio_selector_press'
+onoff_topic = 'homeassistant/sensor/home_radio_onoff'
+next_topic = 'homeassistant/sensor/home_radio_next'
+
+ext_lights_topic = 'homeassistant/light/home_radio_extlights'
 
 def sendDiscover():
-    publish.single('homeassistant/sensor/home_radio_volume/config', payload='{"name": "Home Radio Volume", "state_topic": "' + volume_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
-    publish.single('homeassistant/sensor/home_radio_selector/config', payload='{"name": "Home Radio Selector", "state_topic": "' + selector_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
-    publish.single('homeassistant/sensor/home_radio_onoff/config', payload='{"name": "Home Radio OnOff", "state_topic": "' + onoff_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
-    publish.single('homeassistant/sensor/home_radio_next/config', payload='{"name": "Home Radio Next", "state_topic": "' + next_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
-    publish.single('homeassistant/sensor/home_radio_selector_press/config', payload='{"name": "Home Radio Selector Press", "state_topic": "' + selector_press_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
+    publish.single(volume_topic + '/config', payload='{"name": "Home Radio Volume", "state_topic": "' + volume_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
+    publish.single(selector_topic + '/config', payload='{"name": "Home Radio Selector", "state_topic": "' + selector_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
+    publish.single(onoff_topic + '/config', payload='{"name": "Home Radio OnOff", "state_topic": "' + onoff_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
+    publish.single(next_topic + '/config', payload='{"name": "Home Radio Next", "state_topic": "' + next_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
+    publish.single(selector_press_topic + '/config', payload='{"name": "Home Radio Selector Press", "state_topic": "' + selector_press_topic + '"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
+    publish.single(ext_lights_topic + '/config', payload='{"name": "Home Radio External Light", "state_topic": "' + ext_lights_topic + '/state", "command_topic": "' + ext_lights_topic + '/set"}', hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD})
 
 client = mqtt.Client("ha-client")
 
@@ -100,6 +105,7 @@ SWITCHPIN_LEFT = 13
 CLOCKPIN_RIGHT = 20
 DATAPIN_RIGHT = 12
 SWITCHPIN_RIGHT = 16
+EXT_LIGHT_PIN = 25
 global counter
 global ky040_left
 global ky040_right
@@ -120,17 +126,18 @@ def setup():
     ky040_right = RotaryEncoder(CLOCKPIN_RIGHT, DATAPIN_RIGHT, SWITCHPIN_RIGHT, rotaryButtonPressRight)
     GPIO.add_event_detect(RoPushNext, GPIO.FALLING, callback=button_press_next, bouncetime=100)
     GPIO.add_event_detect(RoPushOffOn, GPIO.BOTH, callback=button_press_on_off, bouncetime=100)
+    GPIO.setup(EXT_LIGHT_PIN, GPIO.OUT)
 
 def rotaryButtonPressLeft(dummy):
     time.sleep(1)
 
 def rotaryButtonPressRight(dummy):
-    publish.single(selector_press_topic, payload="True", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
-    publish.single(selector_press_topic, payload="False", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
+    publish.single(selector_press_topic + "/state", payload="True", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
+    publish.single(selector_press_topic + "/state", payload="False", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
 
 def button_press_next(ev=None):
-    publish.single(next_topic, payload="True", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
-    publish.single(next_topic, payload="False", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
+    publish.single(next_topic + "/state", payload="True", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
+    publish.single(next_topic + "/state", payload="False", hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
 
 def button_press_on_off(ev=None):
     global currentOnOff
@@ -140,7 +147,7 @@ def button_press_on_off(ev=None):
     else:
         if RoPushOffOnLastPullUp > 0 and (time.time() - RoPushOffOnLastPullUp) >= 1.0:
             currentOnOff = not currentOnOff
-            publish.single(onoff_topic, payload=str(currentOnOff), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
+            publish.single(onoff_topic + "/state", payload=str(currentOnOff), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
             print("toggle_media_player", flush=True)
         RoPushOffOnLastPullUp = 0
 
@@ -149,6 +156,17 @@ def loop():
     currentSelector = 1000
     while True:
         time.sleep(0.2)
+        if len(messages)>0:
+            msg=messages.pop(0)
+
+            if msg.topic == "homeassistant/status":
+                sendDiscover()
+            elif msg.topic == ext_lights_topic + "/set":
+                value=str(msg.payload.decode("utf-8"))
+                print("received ", value, flush=True)
+                gpioValue = value == "ON" and 1 or 0
+                GPIO.output(EXT_LIGHT_PIN, gpioValue)
+                publish.single(ext_lights_topic + "/state", payload=value, hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
         try:
             ##########
             # Volume #
@@ -160,7 +178,7 @@ def loop():
             if (newValue != 0):
                 newVolume = currentVolume + newValue*abs(newValue)
                 if (newVolume > 0 and newVolume < 100):
-                    publish.single(volume_topic, payload=str(newVolume), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
+                    publish.single(volume_topic + "/state", payload=str(newVolume), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
                     print("Setting rotary left value (volume): " + str(currentVolume) + " -> " + str(newVolume) + " (inc: " + str(newValue) + ")", flush=True)
                     currentVolume = newVolume
             
@@ -177,7 +195,7 @@ def loop():
                 elif (newValue < 0):
                     currentSelector = currentSelector - 1
                 print("Setting rotary right value (menu): ", newValue, flush=True)
-                publish.single(selector_topic, payload=str(currentSelector), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
+                publish.single(selector_topic + "/state", payload=str(currentSelector), hostname=HOST, port=PORT, auth={'username': USERNAME, 'password': PASSWORD}, retain=True)
         except:
             print("Some exception", flush=True)
             print(traceback.format_exc(), flush=True)
